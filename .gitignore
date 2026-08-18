@@ -1,0 +1,16 @@
+# Bỏ qua môi trường ảo (Cực kỳ quan trọng)
+venv/
+
+# Bỏ qua các file sinh ra khi Build EXE
+dist/
+build/
+*.spec
+
+# Bỏ qua thư mục chứa kết quả và file test
+data_output/
+*.pdf
+*.xlsx
+
+# Bỏ qua file cache của Python
+__pycache__/
+*.pyc
