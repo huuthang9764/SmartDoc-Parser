@@ -10,7 +10,10 @@ def clean_header(text):
 def run(pdf_paths, output_path, update_status):
     teacher_data = {}
     col_keys = ['ST2', 'CT2', 'ST3', 'CT3', 'ST4', 'CT4', 'ST5', 'CT5', 'ST6', 'CT6', 'ST7', 'CT7']
-    total_pages = sum(len(pdfplumber.open(p).pages) for p in pdf_paths)
+    total_pages = 0
+    for p in pdf_paths:
+        with pdfplumber.open(p) as pdf:
+            total_pages += len(pdf.pages)
     current_page = 0
     
     for path in pdf_paths:

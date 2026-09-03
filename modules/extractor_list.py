@@ -4,7 +4,10 @@ import time
 
 def run(pdf_paths, output_path, update_status):
     all_data = []
-    total_pages = sum(len(pdfplumber.open(p).pages) for p in pdf_paths)
+    total_pages = 0
+    for p in pdf_paths:
+        with pdfplumber.open(p) as pdf:
+            total_pages += len(pdf.pages)
     current_page = 0
     
     for path in pdf_paths:

@@ -1,6 +1,8 @@
 import sys
 import os
 import threading
+import socket
+import webbrowser
 from flask import Flask, request, render_template, send_file, jsonify
 from werkzeug.utils import secure_filename
 
@@ -8,21 +10,24 @@ from werkzeug.utils import secure_filename
 from modules import extractor_tkb, extractor_list
 
 # ==========================================
-# CẤU HÌNH ĐƯỜNG DẪN (Hỗ trợ cả Code và file .EXE)
+# CẤU HÌNH ĐƯỜNG DẪN (Hỗ trợ PyInstaller v6+ với thư mục _internal)
 # ==========================================
 if getattr(sys, 'frozen', False):
-    # Nếu đang chạy bằng file .exe
-    BASE_DIR = os.path.dirname(sys.executable)
+    # Khi chạy file .exe (sys._MEIPASS trỏ vào thư mục tạm chứa templates)
+    BUNDLE_DIR = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    # sys.executable trỏ đến thư mục chứa file .exe bên ngoài
+    EXE_DIR = os.path.dirname(sys.executable)
 else:
-    # Nếu đang chạy bằng mã nguồn .py thông thường
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # Khi chạy bằng mã nguồn .py thông thường
+    BUNDLE_DIR = os.path.dirname(os.path.abspath(__file__))
+    EXE_DIR = BUNDLE_DIR
 
-# Khởi tạo Flask và chỉ định rõ thư mục giao diện
-app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'))
+# Khởi tạo Flask và chỉ định rõ vị trí thư mục giao diện
+app = Flask(__name__, template_folder=os.path.join(BUNDLE_DIR, 'templates'))
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
-# Tạo thư mục chứa file xuất ra nằm ngay cạnh file .exe
-OUTPUT_DIR = os.path.join(BASE_DIR, 'data_output')
+# Tạo thư mục chứa file xuất ra nằm ngay cạnh file .exe để dễ dàng lấy file
+OUTPUT_DIR = os.path.join(EXE_DIR, 'data_output')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = OUTPUT_DIR
 
@@ -103,6 +108,9 @@ def upload_file():
                     processing_status['status'] = 'error'
                     update_status(0, result['error'], 0, 0)
                     
+            except PermissionError:
+                processing_status['status'] = 'error'
+                update_status(0, 'File Excel đang mở ở ứng dụng khác (ví dụ Microsoft Excel). Vui lòng đóng file trước khi chạy lại!', 0, 0)
             except Exception as e:
                 processing_status['status'] = 'error'
                 update_status(0, f'Lỗi hệ thống: {str(e)}', 0, 0)
@@ -149,6 +157,23 @@ def download_file():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+def find_free_port(start_port=5000):
+    for port in range(start_port, start_port + 20):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('127.0.0.1', port)) != 0:
+                return port
+    return start_port
+
+def open_browser(port):
+    webbrowser.open_new(f"http://127.0.0.1:{port}")
+
 if __name__ == '__main__':
-    # Bật server ở cổng 5000
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    port = find_free_port(5000)
+    # Hẹn giờ 1.2s tự động mở trình duyệt ngay sau khi server khởi chạy
+    threading.Timer(1.2, open_browser, args=[port]).start()
+    print("=" * 60)
+    print(f"  SmartDoc Parser dang chay tai: http://127.0.0.1:{port}")
+    print("  He thong dang tu dong mo trinh duyet...")
+    print("  (Dong cua so nay de tat ung dung)")
+    print("=" * 60)
+    app.run(debug=False, host='127.0.0.1', port=port)

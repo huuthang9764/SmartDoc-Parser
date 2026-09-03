@@ -14,15 +14,16 @@ call venv\Scripts\activate
 echo [2/3] Cai dat PyInstaller...
 pip install pyinstaller -q
 
-echo [3/3] Dang bien dich thanh .exe (Co the mat 1-2 phut)...
-:: --onedir: Tao ra 1 thu muc chua exe va cac file phu tro (Giup chay nhanh hon onedir)
+echo [3/3] Dang bien dich thanh 1 file .exe duy nhat (Co the mat 1-2 phut)...
+:: --onefile: Tao ra 1 file .exe duy nhat (De dang gui cho nguoi khac, chi can 1 file la chay ngay)
 :: --add-data: Copy thu muc templates vao trong ban build
 :: --console: Giu lai man hinh den de nguoi dung biet server dang chay
-pyinstaller --noconfirm --onedir --console --name "SmartDoc-Parser" --add-data "templates;templates" app.py
+pyinstaller --noconfirm --onefile --console --name "SmartDoc-Parser" --add-data "templates;templates" app.py
 
 echo.
 echo ========================================
 echo HOAN TAT!
-echo Ung dung da duoc xuat ra tai thu muc: dist\SmartDoc-Parser
+echo File .exe duy nhat da duoc xuat ra tai: dist\SmartDoc-Parser.exe
+echo Ban chi can copy dung file SmartDoc-Parser.exe nay gui cho nguoi dung!
 echo ========================================
 pause
