@@ -250,7 +250,15 @@
                 html += '</tr></thead><tbody>';
                 data.data.forEach(row => {
                     html += '<tr>';
-                    row.forEach(cell => html += `<td>${String(cell).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</td>`);
+                    row.forEach(cell => {
+                        if (cell === null || cell === undefined || cell === '') {
+                            html += '<td></td>';
+                        } else {
+                            let text = String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                            let formatted = text.split('\n').map(p => p ? p : '&nbsp;').join('<br>');
+                            html += `<td>${formatted}</td>`;
+                        }
+                    });
                     html += '</tr>';
                 });
                 html += '</tbody></table>';

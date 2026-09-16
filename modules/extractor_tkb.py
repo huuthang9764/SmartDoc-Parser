@@ -4,6 +4,40 @@ import time
 import re
 import xlsxwriter
 
+def parse_shifts(tiet_str):
+    shifts = []
+    tiet_clean = str(tiet_str).strip()
+    if '-' in tiet_clean and len(tiet_clean) >= 9:
+        if len(tiet_clean) >= 3 and any(c.isdigit() for c in tiet_clean[0:3]):
+            shifts.append(('ST', 1))
+        if len(tiet_clean) >= 6 and any(c.isdigit() for c in tiet_clean[3:6]):
+            shifts.append(('ST', 2))
+        if len(tiet_clean) >= 9 and any(c.isdigit() for c in tiet_clean[6:9]):
+            shifts.append(('CT', 1))
+        if len(tiet_clean) >= 12 and any(c.isdigit() for c in tiet_clean[9:12]):
+            shifts.append(('CT', 2))
+    else:
+        digits_found = re.findall(r'\d+', tiet_clean)
+        all_nums = set()
+        for d in digits_found:
+            if len(d) > 2:
+                if d == '012':
+                    all_nums.update([10, 11, 12])
+                else:
+                    for char in d:
+                        all_nums.add(int(char))
+            else:
+                all_nums.add(int(d))
+        if any(n in all_nums for n in [1, 2, 3]):
+            shifts.append(('ST', 1))
+        if any(n in all_nums for n in [4, 5, 6]):
+            shifts.append(('ST', 2))
+        if any(n in all_nums for n in [7, 8, 9]):
+            shifts.append(('CT', 1))
+        if any(n in all_nums for n in [10, 11, 12, 0]):
+            shifts.append(('CT', 2))
+    return shifts
+
 def clean_header(text):
     return str(text).lower().replace('\n', '').replace(' ', '') if text else ""
 
@@ -59,16 +93,16 @@ def run(pdf_paths, output_path, update_status):
                             current_teacher = str(row[cbgv_idx]).strip().replace('\n', ' ') if (cbgv_idx != -1 and len(row) > cbgv_idx and row[cbgv_idx]) else page_teacher_name
                             if not current_teacher: continue
                                 
-                            match = re.search(r'\d', tiet_str)
-                            if match:
-                                first_digit_index = match.start()
-                                buoi = "ST" if first_digit_index < 6 else "CT"
-                                col_name = f"{buoi}{thu_str}"
-                                
-                                if col_name in col_keys:
-                                    if current_teacher not in teacher_data: teacher_data[current_teacher] = {k: [] for k in col_keys}
-                                    if phong_str not in teacher_data[current_teacher][col_name]:
-                                        teacher_data[current_teacher][col_name].append(phong_str)
+                            shifts = parse_shifts(tiet_str)
+                            if shifts:
+                                if current_teacher not in teacher_data:
+                                    teacher_data[current_teacher] = {k: {'ca1': [], 'ca2': []} for k in col_keys}
+                                for buoi, ca in shifts:
+                                    col_name = f"{buoi}{thu_str}"
+                                    if col_name in col_keys:
+                                        ca_key = f"ca{ca}"
+                                        if phong_str not in teacher_data[current_teacher][col_name][ca_key]:
+                                            teacher_data[current_teacher][col_name][ca_key].append(phong_str)
                 time.sleep(0.01)
 
     all_rows = []
@@ -78,7 +112,19 @@ def run(pdf_paths, output_path, update_status):
         ten = parts[-1] if len(parts) > 0 else ""
         ho_dem = " ".join(parts[:-1]) if len(parts) > 1 else ""
         row_dict = {'STT': stt, 'Họ đệm': ho_dem, 'Tên': ten}
-        for k in col_keys: row_dict[k] = "\n".join(schedule[k]) if schedule[k] else ""
+        for k in col_keys:
+            ca1_rooms = schedule[k]['ca1']
+            ca2_rooms = schedule[k]['ca2']
+            c1 = "/".join(ca1_rooms) if ca1_rooms else ""
+            c2 = "/".join(ca2_rooms) if ca2_rooms else ""
+            if c1 and c2:
+                row_dict[k] = f"{c1}\n{c2}"
+            elif not c1 and c2:
+                row_dict[k] = f"\n{c2}"
+            elif c1 and not c2:
+                row_dict[k] = f"{c1}\n"
+            else:
+                row_dict[k] = ""
         all_rows.append(row_dict)
         stt += 1
 
