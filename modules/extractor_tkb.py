@@ -67,7 +67,7 @@ def run(pdf_paths, output_path, update_status):
                 if not tables: continue
                     
                 for table in tables:
-                    header_idx, thu_idx, tiet_idx, phong_idx, cbgv_idx = -1, -1, -1, -1, -1
+                    header_idx, thu_idx, tiet_idx, phong_idx, cbgv_idx, dadk_idx = -1, -1, -1, -1, -1, -1
                     for r_idx, row in enumerate(table):
                         cleaned_row = [clean_header(c) for c in row if c]
                         if any('thứ' in c for c in cleaned_row):
@@ -78,17 +78,25 @@ def run(pdf_paths, output_path, update_status):
                                 elif 'tiếthọc' in cl_cell or 'tiếtdạy' in cl_cell: tiet_idx = c_i
                                 elif 'phòng' in cl_cell: phong_idx = c_i
                                 elif 'cánbộgiảngdạy' in cl_cell or 'giảngviên' in cl_cell: cbgv_idx = c_i
+                                elif 'đãđk' in cl_cell or 'đk' in cl_cell: dadk_idx = c_i
                             break
                             
                     if header_idx != -1 and thu_idx != -1 and tiet_idx != -1 and phong_idx != -1:
                         for r_idx in range(header_idx + 1, len(table)):
                             row = table[r_idx]
                             if len(row) <= max(thu_idx, tiet_idx, phong_idx): continue
-                            thu_str = str(row[thu_idx]).strip()
+                            thu_str = str(row[thu_idx]).strip() if row[thu_idx] is not None else ""
                             if not thu_str.isdigit(): continue
+                            
+                            # Bỏ qua các lớp không có sinh viên đăng ký (lớp hủy)
+                            if dadk_idx != -1 and len(row) > dadk_idx and row[dadk_idx] is not None:
+                                dadk_str = str(row[dadk_idx]).strip()
+                                if dadk_str.isdigit() and int(dadk_str) == 0:
+                                    continue
                                 
-                            tiet_str = str(row[tiet_idx]).strip()
-                            phong_str = str(row[phong_idx]).replace('\n', ' ').strip()
+                            tiet_str = str(row[tiet_idx]).strip() if row[tiet_idx] is not None else ""
+                            phong_raw = str(row[phong_idx]) if row[phong_idx] is not None else ""
+                            phong_str = phong_raw.replace('\n', '').strip()
                             
                             current_teacher = str(row[cbgv_idx]).strip().replace('\n', ' ') if (cbgv_idx != -1 and len(row) > cbgv_idx and row[cbgv_idx]) else page_teacher_name
                             if not current_teacher: continue
